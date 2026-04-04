@@ -2,11 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Real-time Chat - Week 3</title>
+    <title>Real-time Chat - Week 4</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; }
+        .main-container { display: flex; gap: 20px; }
+        .chat-section { flex: 3; }
+        .users-section { flex: 1; border: 1px solid #007BFF; padding: 10px; border-radius: 5px; background: #f8f9fa; }
         #messages { height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; list-style: none; margin-bottom: 10px; }
+        #onlineUsers { list-style-type: square; padding-left: 20px; color: #007BFF; font-weight: bold; }
         .status { color: grey; font-style: italic; }
         .auth-container { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; width: 300px; }
     </style>
@@ -21,34 +25,49 @@
             <select id="roomSelect">
                 <option value="General">General</option>
                 <option value="Internship-Group">Internship-Group</option>
-                <option value="Tech-Support">Tech-Support</option>
             </select>
             <button id="joinBtn">Join Room</button>
         </div>
 
-        <ul id="messages"></ul>
-        
-        <input type="text" id="myMessage" placeholder="Type a message..." style="width: 70%;">
-        <button id="sendBtn">Send</button>
+        <div class="main-container">
+            <div class="chat-section">
+                <ul id="messages"></ul>
+                <input type="text" id="myMessage" placeholder="Type a message..." style="width: 70%;">
+                <button id="sendBtn">Send</button>
+            </div>
+
+            <div class="users-section">
+                <h3>🟢 Online Now</h3>
+                <ul id="onlineUsers"></ul>
+            </div>
+        </div>
 
         <script>
             var socket = io();
-            var currentRoom = "General"; // Default room
+            var currentRoom = "General";
 
-            // Automatically join the default room on connection
             socket.emit('join', {'room': currentRoom});
 
-            // Listen for room entry/exit status messages
+            // NEW: Listen for the updated users list from the server
+            socket.on('update_users', function(users) {
+                var usersList = document.getElementById('onlineUsers');
+                usersList.innerHTML = ""; // Clear old list
+                users.forEach(function(user) {
+                    var li = document.createElement('li');
+                    li.textContent = user;
+                    usersList.appendChild(li);
+                });
+            });
+
             socket.on('status', function(data) {
                 var ul = document.getElementById('messages');
                 var li = document.createElement('li');
                 li.className = "status";
                 li.appendChild(document.createTextNode(data.msg));
                 ul.appendChild(li);
-                ul.scrollTop = ul.scrollHeight; // Auto-scroll to bottom
+                ul.scrollTop = ul.scrollHeight;
             });
 
-            // Listen for actual chat messages
             socket.on('message', function(data) {
                 var ul = document.getElementById('messages');
                 var li = document.createElement('li');
@@ -57,23 +76,20 @@
                 ul.scrollTop = ul.scrollHeight;
             });
 
-            // Logic to switch rooms
             document.getElementById('joinBtn').onclick = function() {
                 var newRoom = document.getElementById('roomSelect').value;
                 if (newRoom !== currentRoom) {
-                    document.getElementById('messages').innerHTML = ""; // Clear screen
+                    document.getElementById('messages').innerHTML = "";
                     currentRoom = newRoom;
                     socket.emit('join', {'room': currentRoom});
                 }
             };
 
-            // Logic to send messages
             document.getElementById('sendBtn').onclick = function() {
                 var msgInput = document.getElementById('myMessage');
-                var msg = msgInput.value;
-                if (msg.trim() !== "") {
-                    socket.emit('message', {'msg': msg, 'room': currentRoom});
-                    msgInput.value = ''; // Clear box
+                if (msgInput.value.trim() !== "") {
+                    socket.emit('message', {'msg': msgInput.value, 'room': currentRoom});
+                    msgInput.value = ''; 
                 }
             };
         </script>
@@ -88,7 +104,6 @@
                 <button type="submit">Login</button>
             </form>
         </div>
-
         <div class="auth-container">
             <h3>Create an Account</h3>
             <form action="/register" method="POST">

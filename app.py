@@ -10,6 +10,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
 db = SQLAlchemy(app)
 socketio = SocketIO(app)
 
+# PRO UPGRADE: Track which room each user is in
+# Format: {'Alice': 'General', 'Bob': 'Internship-Group'}
+user_current_room = {}
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
@@ -49,19 +53,45 @@ def logout():
     session.pop('username', None)
     return redirect(url_for('index'))
 
-# --- WEEK 3: ROOM LOGIC ---
+# --- ROOM-SPECIFIC TRACKING LOGIC ---
+
 @socketio.on('join')
 def on_join(data):
     username = session.get('username', 'Anonymous')
-    room = data['room']
-    join_room(room)
-    emit('status', {'msg': username + ' has entered the room: ' + room}, room=room)
+    new_room = data['room']
+
+    # 1. If they were in an old room, remove them from it
+    old_room = user_current_room.get(username)
+    if old_room and old_room != new_room:
+        leave_room(old_room)
+        emit('status', {'msg': f'{username} has left to another room.'}, room=old_room)
+        # Update old room's user list
+        old_room_users = [u for u, r in user_current_room.items() if r == old_room and u != username]
+        emit('update_users', old_room_users, room=old_room)
+
+    # 2. Join the new room
+    join_room(new_room)
+    user_current_room[username] = new_room
+
+    # 3. Update the new room's user list
+    current_room_users = [u for u, r in user_current_room.items() if r == new_room]
+    emit('status', {'msg': f'{username} has entered {new_room}.'}, room=new_room)
+    emit('update_users', current_room_users, room=new_room)
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    username = session.get('username')
+    if username in user_current_room:
+        room = user_current_room[username]
+        del user_current_room[username] # Remove them from tracking
+        # Tell the room they left
+        current_room_users = [u for u, r in user_current_room.items() if r == room]
+        emit('update_users', current_room_users, room=room)
 
 @socketio.on('message')
 def handle_message(data):
     username = session.get('username', 'Anonymous')
     room = data['room']
-    # Broadcast specifically to the ROOM
     emit('message', {'user': username, 'text': data['msg']}, room=room)
 
 if __name__ == '__main__':
