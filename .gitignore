@@ -1,0 +1,20 @@
+# Microsoft Word temporary/lock files
+~$*
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local Database (if you don't want to share your personal chat history)
+instance/
+*.db
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+venv/
+env/
