@@ -2,42 +2,44 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Real-time Chat - Week 4</title>
+    <title>Real-time Chat - Week 5 Mastery</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        .main-container { display: flex; gap: 20px; }
-        .chat-section { flex: 3; }
-        .users-section { flex: 1; border: 1px solid #007BFF; padding: 10px; border-radius: 5px; background: #f8f9fa; }
-        #messages { height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; list-style: none; margin-bottom: 10px; }
-        #onlineUsers { list-style-type: square; padding-left: 20px; color: #007BFF; font-weight: bold; }
-        .status { color: grey; font-style: italic; }
-        .auth-container { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; width: 300px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; }
+        .main-container { display: flex; gap: 20px; max-width: 1000px; margin: 0 auto; }
+        .chat-section { flex: 3; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .users-section { flex: 1; border-left: 3px solid #007BFF; padding: 15px; background: #ffffff; border-radius: 10px; }
+        #messages { height: 400px; overflow-y: auto; border: 1px solid #eee; padding: 10px; list-style: none; margin-bottom: 20px; background: #fafafa; }
+        #messages li { margin-bottom: 10px; padding: 8px; border-radius: 5px; background: #e9ecef; width: fit-content; }
+        .status { color: #6c757d; font-style: italic; font-size: 0.9em; background: none !important; }
+        input[type="text"] { width: 75%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; background-color: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
     </style>
 </head>
 <body>
 
     {% if 'username' in session %}
-        <h2>Welcome, {{ session['username'] }}! <a href="/logout">Logout</a></h2>
-        
-        <div style="margin-bottom: 15px;">
-            <label><strong>Select Room:</strong></label>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2>Welcome to the Hub, {{ session['username'] }}! <a href="/logout" style="font-size: 0.6em; color: red;">Logout</a></h2>
+            <label><strong>Current Room:</strong></label>
             <select id="roomSelect">
                 <option value="General">General</option>
                 <option value="Internship-Group">Internship-Group</option>
+                <option value="Tech-Support">Tech-Support</option>
             </select>
-            <button id="joinBtn">Join Room</button>
+            <button id="joinBtn">Switch Room</button>
         </div>
 
         <div class="main-container">
             <div class="chat-section">
                 <ul id="messages"></ul>
-                <input type="text" id="myMessage" placeholder="Type a message..." style="width: 70%;">
+                <input type="text" id="myMessage" placeholder="Write something amazing...">
                 <button id="sendBtn">Send</button>
             </div>
 
             <div class="users-section">
-                <h3>🟢 Online Now</h3>
+                <h3>🟢 In This Room</h3>
                 <ul id="onlineUsers"></ul>
             </div>
         </div>
@@ -46,12 +48,31 @@
             var socket = io();
             var currentRoom = "General";
 
+            // 1. Join Room on Start
             socket.emit('join', {'room': currentRoom});
 
-            // NEW: Listen for the updated users list from the server
+            // 2. RECEIVE BROADCAST (Week 5 Focus: DOM Manipulation)
+            socket.on('message', function(data) {
+                var ul = document.getElementById('messages');
+                var li = document.createElement('li'); // Create new element
+                li.innerHTML = "<strong>" + data.user + "</strong>: " + data.text;
+                ul.appendChild(li); // Inject into page without reload
+                ul.scrollTop = ul.scrollHeight; // Auto-scroll
+            });
+
+            // 3. SEND MESSAGE (Week 5 Focus: Event Handling)
+            document.getElementById('sendBtn').onclick = function() {
+                var msgInput = document.getElementById('myMessage');
+                if (msgInput.value.trim() !== "") {
+                    socket.emit('message', {'msg': msgInput.value, 'room': currentRoom});
+                    msgInput.value = ''; // Dynamic clear
+                }
+            };
+
+            // 4. UPDATE USER LIST (Dynamic DOM Update)
             socket.on('update_users', function(users) {
                 var usersList = document.getElementById('onlineUsers');
-                usersList.innerHTML = ""; // Clear old list
+                usersList.innerHTML = ""; // Clear list
                 users.forEach(function(user) {
                     var li = document.createElement('li');
                     li.textContent = user;
@@ -59,60 +80,19 @@
                 });
             });
 
-            socket.on('status', function(data) {
-                var ul = document.getElementById('messages');
-                var li = document.createElement('li');
-                li.className = "status";
-                li.appendChild(document.createTextNode(data.msg));
-                ul.appendChild(li);
-                ul.scrollTop = ul.scrollHeight;
-            });
-
-            socket.on('message', function(data) {
-                var ul = document.getElementById('messages');
-                var li = document.createElement('li');
-                li.innerHTML = "<strong>" + data.user + ":</strong> " + data.text;
-                ul.appendChild(li);
-                ul.scrollTop = ul.scrollHeight;
-            });
-
+            // Room Switch Logic
             document.getElementById('joinBtn').onclick = function() {
                 var newRoom = document.getElementById('roomSelect').value;
                 if (newRoom !== currentRoom) {
-                    document.getElementById('messages').innerHTML = "";
+                    document.getElementById('messages').innerHTML = ""; 
                     currentRoom = newRoom;
                     socket.emit('join', {'room': currentRoom});
-                }
-            };
-
-            document.getElementById('sendBtn').onclick = function() {
-                var msgInput = document.getElementById('myMessage');
-                if (msgInput.value.trim() !== "") {
-                    socket.emit('message', {'msg': msgInput.value, 'room': currentRoom});
-                    msgInput.value = ''; 
                 }
             };
         </script>
 
     {% else %}
-        <h2>Login or Register to Chat</h2>
-        <div class="auth-container">
-            <h3>Login</h3>
-            <form action="/login" method="POST">
-                <input type="text" name="username" placeholder="Username" required><br><br>
-                <input type="password" name="password" placeholder="Password" required><br><br>
-                <button type="submit">Login</button>
-            </form>
-        </div>
-        <div class="auth-container">
-            <h3>Create an Account</h3>
-            <form action="/register" method="POST">
-                <input type="text" name="username" placeholder="Choose a Username" required><br><br>
-                <input type="password" name="password" placeholder="Choose a Password" required><br><br>
-                <button type="submit">Register</button>
-            </form>
-        </div>
-    {% endif %}
+        {% endif %}
 
 </body>
 </html>
