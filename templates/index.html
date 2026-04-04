@@ -1,55 +1,99 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Real-time Chat - Week 2</title>
+    <meta charset="UTF-8">
+    <title>Real-time Chat - Week 3</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #messages { height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; list-style: none; margin-bottom: 10px; }
+        .status { color: grey; font-style: italic; }
+        .auth-container { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; width: 300px; }
+    </style>
 </head>
 <body>
 
     {% if 'username' in session %}
         <h2>Welcome, {{ session['username'] }}! <a href="/logout">Logout</a></h2>
         
-        <ul id="messages" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;"></ul>
-        <input type="text" id="myMessage" placeholder="Type a message...">
+        <div style="margin-bottom: 15px;">
+            <label><strong>Select Room:</strong></label>
+            <select id="roomSelect">
+                <option value="General">General</option>
+                <option value="Internship-Group">Internship-Group</option>
+                <option value="Tech-Support">Tech-Support</option>
+            </select>
+            <button id="joinBtn">Join Room</button>
+        </div>
+
+        <ul id="messages"></ul>
+        
+        <input type="text" id="myMessage" placeholder="Type a message..." style="width: 70%;">
         <button id="sendBtn">Send</button>
 
         <script>
             var socket = io();
-            
-            // When the server sends a message, put it on the screen
+            var currentRoom = "General"; // Default room
+
+            // Automatically join the default room on connection
+            socket.emit('join', {'room': currentRoom});
+
+            // Listen for room entry/exit status messages
+            socket.on('status', function(data) {
+                var ul = document.getElementById('messages');
+                var li = document.createElement('li');
+                li.className = "status";
+                li.appendChild(document.createTextNode(data.msg));
+                ul.appendChild(li);
+                ul.scrollTop = ul.scrollHeight; // Auto-scroll to bottom
+            });
+
+            // Listen for actual chat messages
             socket.on('message', function(data) {
                 var ul = document.getElementById('messages');
                 var li = document.createElement('li');
-                // Format: "Username: Message"
-                li.appendChild(document.createTextNode(data.user + ': ' + data.text));
+                li.innerHTML = "<strong>" + data.user + ":</strong> " + data.text;
                 ul.appendChild(li);
+                ul.scrollTop = ul.scrollHeight;
             });
 
-            // When you click send, send the message to the server
+            // Logic to switch rooms
+            document.getElementById('joinBtn').onclick = function() {
+                var newRoom = document.getElementById('roomSelect').value;
+                if (newRoom !== currentRoom) {
+                    document.getElementById('messages').innerHTML = ""; // Clear screen
+                    currentRoom = newRoom;
+                    socket.emit('join', {'room': currentRoom});
+                }
+            };
+
+            // Logic to send messages
             document.getElementById('sendBtn').onclick = function() {
-                var msg = document.getElementById('myMessage').value;
-                socket.emit('message', msg);
-                document.getElementById('myMessage').value = ''; // Clear the box
+                var msgInput = document.getElementById('myMessage');
+                var msg = msgInput.value;
+                if (msg.trim() !== "") {
+                    socket.emit('message', {'msg': msg, 'room': currentRoom});
+                    msgInput.value = ''; // Clear box
+                }
             };
         </script>
 
     {% else %}
         <h2>Login or Register to Chat</h2>
-        
-        <div style="margin-bottom: 20px;">
+        <div class="auth-container">
             <h3>Login</h3>
             <form action="/login" method="POST">
-                <input type="text" name="username" placeholder="Username" required>
-                <input type="password" name="password" placeholder="Password" required>
+                <input type="text" name="username" placeholder="Username" required><br><br>
+                <input type="password" name="password" placeholder="Password" required><br><br>
                 <button type="submit">Login</button>
             </form>
         </div>
 
-        <div>
+        <div class="auth-container">
             <h3>Create an Account</h3>
             <form action="/register" method="POST">
-                <input type="text" name="username" placeholder="Choose a Username" required>
-                <input type="password" name="password" placeholder="Choose a Password" required>
+                <input type="text" name="username" placeholder="Choose a Username" required><br><br>
+                <input type="password" name="password" placeholder="Choose a Password" required><br><br>
                 <button type="submit">Register</button>
             </form>
         </div>
