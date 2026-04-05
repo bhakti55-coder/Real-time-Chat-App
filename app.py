@@ -128,15 +128,14 @@ def handle_message(data):
     room = data['room']
     text = data['msg']
     
-    # 1. Create the message record (The "Saving" part)
-    # This uses the Message class we made in Step 1
+    # A. CREATE THE RECORD: Create a new row for our "notebook"
     new_msg = Message(username=username, room=room, text=text)
     
-    # 2. Add it to the database session and commit (The "Writing" part)
+    # B. SAVE IT: Tell the database to add this row and save it permanently
     db.session.add(new_msg)
     db.session.commit()
     
-    # 3. Broadcast to the room as usual
+    # C. SHOUT IT: Now tell everyone in the room what was said
     emit('message', {'user': username, 'text': text}, room=room)
 
 if __name__ == '__main__':
