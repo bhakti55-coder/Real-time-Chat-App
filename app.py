@@ -97,6 +97,8 @@ def on_join(data):
     # ... (Keep all your existing room-joining logic here) ...
 
     # Look for this line (it is usually the last line in your current function):
+    # Define who is currently in the room
+    current_room_users = [u for u, r in user_current_room.items() if r == new_room]
     emit('update_users', current_room_users, room=new_room)
 
     # >>> PASTE STEP 3 CODE DIRECTLY BELOW THAT LINE <<<
