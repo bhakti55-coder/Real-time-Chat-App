@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import Flask, render_template, request, session, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_sqlalchemy import SQLAlchemy
@@ -5,7 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'my-super-secret-key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db' 
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
 
 db = SQLAlchemy(app)
 socketio = SocketIO(app)
@@ -13,10 +14,6 @@ socketio = SocketIO(app)
 # PRO UPGRADE: Track which room each user is in
 # Format: {'Alice': 'General', 'Bob': 'Internship-Group'}
 user_current_room = {}
-
-from datetime import datetime  # <--- PASTE 1 GOES HERE
-from flask import Flask, render_template, request, session, redirect, url_for
-# ... other imports ...
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -76,7 +73,6 @@ def on_join(data):
     if old_room and old_room != new_room:
         leave_room(old_room)
         emit('status', {'msg': f'{username} has left to another room.'}, room=old_room)
-        # Update old room's user list
         old_room_users = [u for u, r in user_current_room.items() if r == old_room and u != username]
         emit('update_users', old_room_users, room=old_room)
 
@@ -89,27 +85,11 @@ def on_join(data):
     emit('status', {'msg': f'{username} has entered {new_room}.'}, room=new_room)
     emit('update_users', current_room_users, room=new_room)
 
-@socketio.on('join')
-def on_join(data):
-    username = session.get('username', 'Anonymous')
-    new_room = data['room']
-
-    # ... (Keep all your existing room-joining logic here) ...
-
-    # Look for this line (it is usually the last line in your current function):
-    # Define who is currently in the room
-    current_room_users = [u for u, r in user_current_room.items() if r == new_room]
-    emit('update_users', current_room_users, room=new_room)
-
-    # >>> PASTE STEP 3 CODE DIRECTLY BELOW THAT LINE <<<
-    
-    # 1. Fetch historical messages for this room from the database
+    # 4. Fetch historical messages for this room from the database
     past_messages = Message.query.filter_by(room=new_room).order_by(Message.timestamp).all()
-    
-    # 2. Format them into a list
     history = [{'user': msg.username, 'text': msg.text} for msg in past_messages]
     
-    # 3. Send history ONLY to the user who just joined
+    # Send history ONLY to the user who just joined
     emit('load_history', history, to=request.sid)
 
 @socketio.on('disconnect')
@@ -128,14 +108,14 @@ def handle_message(data):
     room = data['room']
     text = data['msg']
     
-    # A. CREATE THE RECORD: Create a new row for our "notebook"
+    # A. CREATE THE RECORD
     new_msg = Message(username=username, room=room, text=text)
     
-    # B. SAVE IT: Tell the database to add this row and save it permanently
+    # B. SAVE IT
     db.session.add(new_msg)
     db.session.commit()
     
-    # C. SHOUT IT: Now tell everyone in the room what was said
+    # C. SHOUT IT
     emit('message', {'user': username, 'text': text}, room=room)
 
 if __name__ == '__main__':

@@ -12,9 +12,10 @@
         #messages { height: 400px; overflow-y: auto; border: 1px solid #eee; padding: 10px; list-style: none; margin-bottom: 20px; background: #fafafa; }
         #messages li { margin-bottom: 10px; padding: 8px; border-radius: 5px; background: #e9ecef; width: fit-content; }
         .status { color: #6c757d; font-style: italic; font-size: 0.9em; background: none !important; }
-        input[type="text"] { width: 75%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        input[type="text"], input[type="password"] { width: 75%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px;}
         button { padding: 10px 20px; background-color: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; }
         button:hover { background-color: #0056b3; }
+        .login-box { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
     </style>
 </head>
 <body>
@@ -51,31 +52,30 @@
             // 1. Join Room on Start
             socket.emit('join', {'room': currentRoom});
 
-            // 2. RECEIVE BROADCAST (Week 5 Focus: DOM Manipulation)
+            // 2. RECEIVE BROADCAST
             socket.on('message', function(data) {
                 var ul = document.getElementById('messages');
-                var li = document.createElement('li'); // Create new element
+                var li = document.createElement('li'); 
                 li.innerHTML = "<strong>" + data.user + "</strong>: " + data.text;
-                ul.appendChild(li); // Inject into page without reload
-                ul.scrollTop = ul.scrollHeight; // Auto-scroll
+                ul.appendChild(li); 
+                ul.scrollTop = ul.scrollHeight; 
             });
 
-        // --- PASTE THIS IN index.html SCRIPT SECTION ---
+            // LOAD HISTORY FROM DATABASE
+            socket.on('load_history', function(messages) {
+                var ul = document.getElementById('messages');
+                ul.innerHTML = ""; // Clear the window so we don't double the messages
+                
+                messages.forEach(function(msg) {
+                    var li = document.createElement('li'); // Create the message bubble
+                    li.innerHTML = "<strong>" + msg.user + "</strong>: " + msg.text;
+                    ul.appendChild(li); // Add it to the chat window
+                });
+                
+                ul.scrollTop = ul.scrollHeight; // Auto-scroll to the latest message
+            });
 
-socket.on('load_history', function(messages) {
-    var ul = document.getElementById('messages');
-    ul.innerHTML = ""; // Clear the window so we don't double the messages
-    
-    messages.forEach(function(msg) {
-        var li = document.createElement('li'); // Create the message bubble
-        li.innerHTML = "<strong>" + msg.user + "</strong>: " + msg.text;
-        ul.appendChild(li); // Add it to the chat window
-    });
-    
-    ul.scrollTop = ul.scrollHeight; // Auto-scroll to the latest message
-});
-
-            // 3. SEND MESSAGE (Week 5 Focus: Event Handling)
+            // 3. SEND MESSAGE 
             document.getElementById('sendBtn').onclick = function() {
                 var msgInput = document.getElementById('myMessage');
                 if (msgInput.value.trim() !== "") {
@@ -84,7 +84,7 @@ socket.on('load_history', function(messages) {
                 }
             };
 
-            // 4. UPDATE USER LIST (Dynamic DOM Update)
+            // 4. UPDATE USER LIST
             socket.on('update_users', function(users) {
                 var usersList = document.getElementById('onlineUsers');
                 usersList.innerHTML = ""; // Clear list
@@ -107,7 +107,22 @@ socket.on('load_history', function(messages) {
         </script>
 
     {% else %}
-        {% endif %}
+        <div class="login-box">
+            <h2>Login to Chat</h2>
+            <form action="/login" method="POST">
+                <input type="text" name="username" placeholder="Username" required><br>
+                <input type="password" name="password" placeholder="Password" required><br>
+                <button type="submit" style="width: 75%;">Login</button>
+            </form>
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+            <h2>Or Register</h2>
+            <form action="/register" method="POST">
+                <input type="text" name="username" placeholder="Choose a Username" required><br>
+                <input type="password" name="password" placeholder="Choose a Password" required><br>
+                <button type="submit" style="width: 75%; background-color: #28a745;">Register</button>
+            </form>
+        </div>
+    {% endif %}
 
 </body>
 </html>
