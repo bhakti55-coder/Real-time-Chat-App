@@ -14,10 +14,21 @@ socketio = SocketIO(app)
 # Format: {'Alice': 'General', 'Bob': 'Internship-Group'}
 user_current_room = {}
 
+from datetime import datetime  # <--- PASTE 1 GOES HERE
+from flask import Flask, render_template, request, session, redirect, url_for
+# ... other imports ...
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(150), nullable=False)
+    room = db.Column(db.String(150), nullable=False)
+    text = db.Column(db.String(500), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 with app.app_context():
     db.create_all()
@@ -78,6 +89,27 @@ def on_join(data):
     emit('status', {'msg': f'{username} has entered {new_room}.'}, room=new_room)
     emit('update_users', current_room_users, room=new_room)
 
+@socketio.on('join')
+def on_join(data):
+    username = session.get('username', 'Anonymous')
+    new_room = data['room']
+
+    # ... (Keep all your existing room-joining logic here) ...
+
+    # Look for this line (it is usually the last line in your current function):
+    emit('update_users', current_room_users, room=new_room)
+
+    # >>> PASTE STEP 3 CODE DIRECTLY BELOW THAT LINE <<<
+    
+    # 1. Fetch historical messages for this room from the database
+    past_messages = Message.query.filter_by(room=new_room).order_by(Message.timestamp).all()
+    
+    # 2. Format them into a list
+    history = [{'user': msg.username, 'text': msg.text} for msg in past_messages]
+    
+    # 3. Send history ONLY to the user who just joined
+    emit('load_history', history, to=request.sid)
+
 @socketio.on('disconnect')
 def handle_disconnect():
     username = session.get('username')
@@ -92,7 +124,18 @@ def handle_disconnect():
 def handle_message(data):
     username = session.get('username', 'Anonymous')
     room = data['room']
-    emit('message', {'user': username, 'text': data['msg']}, room=room)
+    text = data['msg']
+    
+    # 1. Create the message record (The "Saving" part)
+    # This uses the Message class we made in Step 1
+    new_msg = Message(username=username, room=room, text=text)
+    
+    # 2. Add it to the database session and commit (The "Writing" part)
+    db.session.add(new_msg)
+    db.session.commit()
+    
+    # 3. Broadcast to the room as usual
+    emit('message', {'user': username, 'text': text}, room=room)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

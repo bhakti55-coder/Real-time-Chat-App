@@ -60,6 +60,21 @@
                 ul.scrollTop = ul.scrollHeight; // Auto-scroll
             });
 
+        // --- PASTE THIS IN index.html SCRIPT SECTION ---
+
+socket.on('load_history', function(messages) {
+    var ul = document.getElementById('messages');
+    ul.innerHTML = ""; // Clear the window so we don't double the messages
+    
+    messages.forEach(function(msg) {
+        var li = document.createElement('li'); // Create the message bubble
+        li.innerHTML = "<strong>" + msg.user + "</strong>: " + msg.text;
+        ul.appendChild(li); // Add it to the chat window
+    });
+    
+    ul.scrollTop = ul.scrollHeight; // Auto-scroll to the latest message
+});
+
             // 3. SEND MESSAGE (Week 5 Focus: Event Handling)
             document.getElementById('sendBtn').onclick = function() {
                 var msgInput = document.getElementById('myMessage');
