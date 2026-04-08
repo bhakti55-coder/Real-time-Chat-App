@@ -62,3 +62,14 @@ In this phase, I transitioned the application from a temporary session-based cha
 * **Authentication Security:** Added a registration and login system using `werkzeug.security` to hash passwords, ensuring user data is protected.
 * **Bug Fixes:** Resolved critical issues where the `body` tag was empty and fixed variable definition errors in the room-tracking logic.
 * **Version Control:** Managed repository sync conflicts and pushed the updated architecture to GitHub using GitHub Desktop.
+
+# 🚀 Week 7 Milestone: Advanced Features & Deployment
+
+This final phase focused on enhancing user experience through real-time feedback and preparing the application for a production environment.
+
+### **Key Achievements:**
+* **Real-time Typing Indicators:** Integrated `typing` and `stop_typing` Socket.IO events to provide instant visual feedback when a user is composing a message.
+* **Advanced Message Formatting:** Updated the backend to process and attach human-readable timestamps (e.g., 10:45 AM) to every message for better conversation tracking.
+* **Cloud Readiness:** Configured the application for deployment by implementing dynamic port handling (`os.environ.get("PORT")`) and setting up production-grade environment files.
+* **Deployment Configuration:** Created a `Procfile` and `requirements.txt` to manage dependencies and process execution on cloud platforms like Render or PythonAnywhere.
+* **Final System Testing:** Conducted multi-user tests to verify concurrency, history persistence, and UI responsiveness under real-time conditions.
