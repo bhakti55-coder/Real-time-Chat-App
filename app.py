@@ -1,4 +1,7 @@
-import os # Added for deployment
+import eventlet
+eventlet.monkey_patch()
+
+# ... all your other imports (os, datetime, flask, etc.) stay below this ...
 from datetime import datetime
 from flask import Flask, render_template, request, session, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -61,6 +64,10 @@ def login():
 def logout():
     session.pop('username', None)
     return redirect(url_for('index'))
+
+@app.route('/healthz')
+def health_check():
+    return "OK", 200
 
 @socketio.on('join')
 def on_join(data):
