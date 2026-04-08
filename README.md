@@ -73,3 +73,8 @@ This final phase focused on enhancing user experience through real-time feedback
 * **Cloud Readiness:** Configured the application for deployment by implementing dynamic port handling (`os.environ.get("PORT")`) and setting up production-grade environment files.
 * **Deployment Configuration:** Created a `Procfile` and `requirements.txt` to manage dependencies and process execution on cloud platforms like Render or PythonAnywhere.
 * **Final System Testing:** Conducted multi-user tests to verify concurrency, history persistence, and UI responsiveness under real-time conditions.
+
+### **Live Deployment**
+* **Infrastructure:** Hosted on **Render.com** using a Gunicorn/Eventlet production server.
+* **Environment Configuration:** Added dynamic `PORT` handling and `monkey_patching` for high-concurrency performance.
+* **CI/CD Pipeline:** Configured "Auto-Deploy" to update the live website automatically whenever code is pushed to the main branch.
