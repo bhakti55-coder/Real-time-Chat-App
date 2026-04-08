@@ -1,7 +1,7 @@
 import eventlet
 eventlet.monkey_patch()
 
-# ... all your other imports (os, datetime, flask, etc.) stay below this ...
+import os
 from datetime import datetime
 from flask import Flask, render_template, request, session, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -120,10 +120,5 @@ def handle_message(data):
     emit('message', {'user': username, 'text': text, 'time': formatted_time}, room=room)
 
 if __name__ == '__main__':
-    # PORT handling for cloud deployment
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
-
-    if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host='0.0.0.0', port=port, debug=False)
