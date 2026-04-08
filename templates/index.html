@@ -9,8 +9,13 @@
         .main-container { display: flex; gap: 20px; max-width: 1000px; margin: 0 auto; }
         .chat-section { flex: 3; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .users-section { flex: 1; border-left: 3px solid #007BFF; padding: 15px; background: #ffffff; border-radius: 10px; }
-        #messages { height: 400px; overflow-y: auto; border: 1px solid #eee; padding: 10px; list-style: none; margin-bottom: 20px; background: #fafafa; }
+        #messages { height: 400px; overflow-y: auto; border: 1px solid #eee; padding: 10px; list-style: none; margin-bottom: 5px; background: #fafafa; }
         #messages li { margin-bottom: 10px; padding: 8px; border-radius: 5px; background: #e9ecef; width: fit-content; }
+        
+        /* New Advanced CSS */
+        .time-stamp { font-size: 0.7em; color: #888; margin-left: 10px; }
+        .typing-indicator { height: 20px; font-size: 0.85em; color: #888; font-style: italic; margin-bottom: 10px; padding-left: 5px;}
+        
         .status { color: #6c757d; font-style: italic; font-size: 0.9em; background: none !important; }
         input[type="text"], input[type="password"] { width: 75%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px;}
         button { padding: 10px 20px; background-color: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; }
@@ -35,6 +40,8 @@
         <div class="main-container">
             <div class="chat-section">
                 <ul id="messages"></ul>
+                <div id="typingDisplay" class="typing-indicator"></div>
+                
                 <input type="text" id="myMessage" placeholder="Write something amazing...">
                 <button id="sendBtn">Send</button>
             </div>
@@ -49,45 +56,76 @@
             var socket = io();
             var currentRoom = "General";
 
-            // 1. Join Room on Start
             socket.emit('join', {'room': currentRoom});
 
-            // 2. RECEIVE BROADCAST
+            // RECEIVE BROADCAST (Now with timestamps)
             socket.on('message', function(data) {
                 var ul = document.getElementById('messages');
                 var li = document.createElement('li'); 
-                li.innerHTML = "<strong>" + data.user + "</strong>: " + data.text;
+                li.innerHTML = "<strong>" + data.user + "</strong>: " + data.text + "<span class='time-stamp'>" + data.time + "</span>";
                 ul.appendChild(li); 
                 ul.scrollTop = ul.scrollHeight; 
             });
 
-            // LOAD HISTORY FROM DATABASE
+            // LOAD HISTORY (Now with timestamps)
             socket.on('load_history', function(messages) {
                 var ul = document.getElementById('messages');
-                ul.innerHTML = ""; // Clear the window so we don't double the messages
+                ul.innerHTML = ""; 
                 
                 messages.forEach(function(msg) {
-                    var li = document.createElement('li'); // Create the message bubble
-                    li.innerHTML = "<strong>" + msg.user + "</strong>: " + msg.text;
-                    ul.appendChild(li); // Add it to the chat window
+                    var li = document.createElement('li');
+                    li.innerHTML = "<strong>" + msg.user + "</strong>: " + msg.text + "<span class='time-stamp'>" + msg.time + "</span>";
+                    ul.appendChild(li); 
                 });
                 
-                ul.scrollTop = ul.scrollHeight; // Auto-scroll to the latest message
+                ul.scrollTop = ul.scrollHeight; 
             });
 
-            // 3. SEND MESSAGE 
+            // --- TYPING INDICATOR LOGIC ---
+            var msgInput = document.getElementById('myMessage');
+            var typingTimer;
+            var isTyping = false;
+
+            // Detect when user types
+            msgInput.addEventListener('input', function() {
+                if (!isTyping) {
+                    isTyping = true;
+                    socket.emit('typing', {'room': currentRoom});
+                }
+                
+                clearTimeout(typingTimer);
+                // If they stop typing for 1 second (1000ms), remove the indicator
+                typingTimer = setTimeout(function() {
+                    isTyping = false;
+                    socket.emit('stop_typing', {'room': currentRoom});
+                }, 1000);
+            });
+
+            // Listen for others typing
+            socket.on('user_typing', function(data) {
+                document.getElementById('typingDisplay').innerText = data.user + " is typing...";
+            });
+
+            socket.on('user_stop_typing', function() {
+                document.getElementById('typingDisplay').innerText = "";
+            });
+
+            // SEND MESSAGE 
             document.getElementById('sendBtn').onclick = function() {
-                var msgInput = document.getElementById('myMessage');
                 if (msgInput.value.trim() !== "") {
                     socket.emit('message', {'msg': msgInput.value, 'room': currentRoom});
-                    msgInput.value = ''; // Dynamic clear
+                    msgInput.value = ''; 
+                    // Stop the typing indicator instantly when sent
+                    clearTimeout(typingTimer);
+                    isTyping = false;
+                    socket.emit('stop_typing', {'room': currentRoom});
                 }
             };
 
-            // 4. UPDATE USER LIST
+            // UPDATE USER LIST
             socket.on('update_users', function(users) {
                 var usersList = document.getElementById('onlineUsers');
-                usersList.innerHTML = ""; // Clear list
+                usersList.innerHTML = ""; 
                 users.forEach(function(user) {
                     var li = document.createElement('li');
                     li.textContent = user;
